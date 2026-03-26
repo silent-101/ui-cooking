@@ -1,0 +1,9 @@
+import { SideBarExample } from "./components/sidebar/example";
+
+export function App() {
+  return (
+    <div className="w-full min-h-screen bg-stone-900 text-white p-5">
+      <SideBarExample />
+    </div>
+  )
+}

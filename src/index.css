@@ -1,0 +1,12 @@
+@import "tailwindcss";
+
+@supports (-moz-appearance: none) {
+	.sidebar-overlay {
+		backdrop-filter: none;
+	}
+
+	.sidebar-container {
+		backface-visibility: hidden;
+		transform: translateZ(0);
+	}
+}
