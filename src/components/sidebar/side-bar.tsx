@@ -14,7 +14,7 @@ interface sidebar_ctx_t {
 
 const sidebar_ctx = createContext<sidebar_ctx_t | undefined>(undefined);
 
-function use_sidebar_ctx() {
+function useSidebarCtx() {
   const ctx = useContext(sidebar_ctx);
   if (!ctx) throw new Error("[ContextProvider:Erorr] SideBar context provider is Missing.")
   return ctx;
@@ -36,21 +36,21 @@ function SideBar({ children }: { children: ReactNode }) {
 }
 
 function Trigger({ children, className, ...props }: ComponentPropsWithRef<"button">) {
-  const { onToggle } = use_sidebar_ctx();
+  const { onToggle } = useSidebarCtx();
   return (
     <button onClick={onToggle} className={cn(className)} {...props}>{children}</button>
   )
 }
 
 function Close({ children, className, ...props }: ComponentPropsWithRef<"button">) {
-  const { onClose } = use_sidebar_ctx();
+  const { onClose } = useSidebarCtx();
   return (
     <button onClick={onClose} className={cn(className)} {...props}>{children}</button>
   )
 }
 
 function OverLay({ className, ...props }: ComponentPropsWithRef<"div">) {
-  const { open, onClose } = use_sidebar_ctx();
+  const { open, onClose } = useSidebarCtx();
   const overlayRef = useRef<HTMLDivElement>(null);
   useGSAP(() => {
     const ele = overlayRef.current;
@@ -75,8 +75,8 @@ function OverLay({ className, ...props }: ComponentPropsWithRef<"div">) {
   )
 }
 const sidebarWidths = {
-  base: "w-[clamp(20rem,20vw,22rem)]",
-  sm: "sm:w-[clamp(18rem,20vw,22rem)]",
+  base: "w-screen",
+  sm: "sm:w-[min(100vw,22rem)]",
   md: "md:w-[clamp(18rem,19vw,22rem)]",
   lg: "lg:w-[clamp(20rem,14vw,20rem)]",
 };
@@ -86,7 +86,7 @@ function responsive(classes: Record<string, string>) {
 }
 
 function Container({ children, className, ...props }: ComponentPropsWithRef<"div">) {
-  const { open } = use_sidebar_ctx();
+  const { open } = useSidebarCtx();
   const containerRef = useRef<HTMLDivElement>(null);
   useGSAP(
     () => {
@@ -95,18 +95,26 @@ function Container({ children, className, ...props }: ComponentPropsWithRef<"div
       gsap.killTweensOf(ele);
       gsap.to(ele, {
         x: open ? 0 : "-100%",
-        duration: open ? 0.3 : 0.37,
-        ease: open ? "power2.out" : "power2.inOut",
+        pointerEvents: open ? "auto" : "none",
+        duration: open ? 0.298 : 0.299,
+        ease: open ? "back.out(1.03)" : "back.in(1.2)",
         overwrite: true,
         force3D: true
       })
     },
     { dependencies: [open], scope: containerRef }
   );
-  
+
   return (
-    <div ref={containerRef}
-    className={cn("sidebar-container fixed left-0 top-0 z-20 overflow-y-auto bg-neutral-950 h-full flex flex-col will-change-transform transform-gpu -translate-x-full", responsive(sidebarWidths), className)} {...props}>{children}</div>
+    <div
+      ref={containerRef}
+      aria-hidden={!open}
+      data-open={open ? "true" : "false"}
+      className={cn("sidebar-container fixed left-0 top-0 z-20 overflow-y-auto bg-neutral-950 h-full flex flex-col will-change-transform transform-gpu -translate-x-full", responsive(sidebarWidths), className)}
+      {...props}
+    >
+      {children}
+    </div>
   )
 }
 
