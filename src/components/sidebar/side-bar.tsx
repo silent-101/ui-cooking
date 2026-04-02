@@ -1,4 +1,4 @@
-import { createContext, useContext, useRef, useState, type ComponentPropsWithRef, type ReactNode } from "react";
+import { createContext, useContext, useRef, useState, type ComponentPropsWithRef, type MouseEvent, type ReactElement, type ReactNode } from "react";
 import { cn } from "../../lib/utils.ts";
 import { useGSAP } from "@gsap/react";
 import { gsap } from "gsap";
@@ -12,15 +12,29 @@ interface sidebar_ctx_t {
   onToggle: () => void;
 }
 
+type SideBarRootProps = { children: ReactNode };
+type SideBarSectionProps = ComponentPropsWithRef<"div">;
+type SideBarButtonProps = ComponentPropsWithRef<"button">;
+
+type SideBarCompoundComponent = (({ children }: SideBarRootProps) => ReactElement) & {
+  Trigger: ({ children, className, onClick, type, ...props }: SideBarButtonProps) => ReactElement;
+  Close: ({ children, className, onClick, type, ...props }: SideBarButtonProps) => ReactElement;
+  Container: ({ children, className, ...props }: SideBarSectionProps) => ReactElement;
+  Header: ({ children, className, ...props }: SideBarSectionProps) => ReactElement;
+  Body: ({ children, className, ...props }: SideBarSectionProps) => ReactElement;
+  Footer: ({ children, className, ...props }: SideBarSectionProps) => ReactElement;
+  Overlay: ({ className, ...props }: SideBarSectionProps) => ReactElement;
+};
+
 const sidebar_ctx = createContext<sidebar_ctx_t | undefined>(undefined);
 
 function useSidebarCtx() {
   const ctx = useContext(sidebar_ctx);
-  if (!ctx) throw new Error("[ContextProvider:Erorr] SideBar context provider is Missing.")
+  if (!ctx) throw new Error("[ContextProvider:Error] SideBar context provider is missing.")
   return ctx;
 }
 
-function SideBar({ children }: { children: ReactNode }) {
+const SideBarRoot = ({ children }: SideBarRootProps) => {
   const [open, setOpen] = useState(false);
   const onOpen = () => setOpen(true);
   const onClose = () => setOpen(false);
@@ -30,26 +44,38 @@ function SideBar({ children }: { children: ReactNode }) {
       <nav className="relative">
         {children}
       </nav>
-      <SideBar.OverLay />
+      <Overlay />
     </sidebar_ctx.Provider>
   )
-}
+};
 
-function Trigger({ children, className, ...props }: ComponentPropsWithRef<"button">) {
+function Trigger({ children, className, onClick, type, ...props }: SideBarButtonProps) {
   const { onToggle } = useSidebarCtx();
+
+  const handleClick = (event: MouseEvent<HTMLButtonElement>) => {
+    onClick?.(event);
+    if (!event.defaultPrevented) onToggle();
+  };
+
   return (
-    <button onClick={onToggle} className={cn(className)} {...props}>{children}</button>
+    <button type={type ?? "button"} onClick={handleClick} className={cn(className)} {...props}>{children}</button>
   )
 }
 
-function Close({ children, className, ...props }: ComponentPropsWithRef<"button">) {
+function Close({ children, className, onClick, type, ...props }: SideBarButtonProps) {
   const { onClose } = useSidebarCtx();
+
+  const handleClick = (event: MouseEvent<HTMLButtonElement>) => {
+    onClick?.(event);
+    if (!event.defaultPrevented) onClose();
+  };
+
   return (
-    <button onClick={onClose} className={cn(className)} {...props}>{children}</button>
+    <button type={type ?? "button"} onClick={handleClick} className={cn(className)} {...props}>{children}</button>
   )
 }
 
-function OverLay({ className, ...props }: ComponentPropsWithRef<"div">) {
+function Overlay({ className, ...props }: SideBarSectionProps) {
   const { open, onClose } = useSidebarCtx();
   const overlayRef = useRef<HTMLDivElement>(null);
   useGSAP(() => {
@@ -137,13 +163,14 @@ function Footer({ children, className, ...props }: ComponentPropsWithRef<"div">)
   )
 }
 
+const SideBar = Object.assign(SideBarRoot, {
+  Trigger,
+  Close,
+  Container,
+  Header,
+  Body,
+  Footer,
+  Overlay,
+}) as SideBarCompoundComponent;
 
-
-SideBar.Trigger = Trigger;
-SideBar.Close = Close;
-SideBar.Container = Container;
-SideBar.Header = Header;
-SideBar.Body = Body;
-SideBar.Footer = Footer;
-SideBar.OverLay = OverLay;
 export default SideBar;

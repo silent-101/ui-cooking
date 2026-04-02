@@ -1,4 +1,4 @@
-import { createContext, useContext, useRef, useState, type ComponentPropsWithRef, type ReactNode } from "react";
+import { createContext, useContext, useRef, useState, type ComponentPropsWithRef, type MouseEvent, type ReactElement, type ReactNode } from "react";
 import { cn } from "../../lib/utils";
 import { useGSAP } from "@gsap/react";
 import { gsap } from "gsap";
@@ -12,17 +12,34 @@ interface SearchbarContextValue {
 	onToggle: () => void;
 }
 
+type SearchBarRootProps = { children: ReactNode };
+type SearchBarSectionProps = ComponentPropsWithRef<"div">;
+type SearchBarButtonProps = ComponentPropsWithRef<"button">;
+
+type SearchBarCompoundComponent = (({ children }: SearchBarRootProps) => ReactElement) & {
+	Trigger: ({ children, className, onClick, type, ...props }: SearchBarButtonProps) => ReactElement;
+	CloseSearch: ({ children, className, onClick, type, ...props }: SearchBarButtonProps) => ReactElement;
+	Head: ({ children, className, ...props }: SearchBarSectionProps) => ReactElement;
+	Body: ({ children, className, ...props }: SearchBarSectionProps) => ReactElement;
+	ClearInput: ({ children, className, type, ...props }: SearchBarButtonProps) => ReactElement;
+	Container: ({ children, className, ...props }: SearchBarSectionProps) => ReactElement;
+	InputContainer: ({ children, className, ...props }: SearchBarSectionProps) => ReactElement;
+	Overlay: ({ className, ...props }: SearchBarSectionProps) => ReactElement;
+	Input: ({ className, ...props }: ComponentPropsWithRef<"input">) => ReactElement;
+	ResultsContainer: ({ children, className, ...props }: SearchBarSectionProps) => ReactElement;
+};
+
 const SearchbarContext = createContext<SearchbarContextValue | undefined>(undefined);
 
 
 function useSearchbarCtx() {
 	const ctx = useContext(SearchbarContext);
-	if (!ctx) throw new Error("[ContextProvider:Erorr] SearchBar context provider is Missing.")
+	if (!ctx) throw new Error("[ContextProvider:Error] SearchBar context provider is missing.")
 	return ctx;
 }
 
 
-function SearchBar({ children }: { children: ReactNode }) {
+const SearchBarRoot = ({ children }: SearchBarRootProps) => {
 	const [open, setOpen] = useState(false);
 
 	const onOpen = () => setOpen(true);
@@ -32,26 +49,38 @@ function SearchBar({ children }: { children: ReactNode }) {
 		<SearchbarContext.Provider value={{ open, onOpen, onClose, onToggle }}>
 			<div className="relative overflow-hidden">
 				{children}
-				<SearchBar.OverLay />
+				<Overlay />
 			</div>
 		</SearchbarContext.Provider>
 	)
-}
+};
 
 
-function Trigger({ children, className, ...props }: ComponentPropsWithRef<"button">) {
+function Trigger({ children, className, onClick, type, ...props }: SearchBarButtonProps) {
 	const { onToggle } = useSearchbarCtx();
+
+	const handleClick = (event: MouseEvent<HTMLButtonElement>) => {
+		onClick?.(event);
+		if (!event.defaultPrevented) onToggle();
+	};
+
 	return (
-		<button className={cn("relative", className)} {...props} onClick={onToggle}>
+		<button type={type ?? "button"} className={cn("relative", className)} {...props} onClick={handleClick}>
 			{children}
 		</button>
 	)
 }
 
-function CloseSearch({ children, className, ...props }: ComponentPropsWithRef<"button">) {
+function CloseSearch({ children, className, onClick, type, ...props }: SearchBarButtonProps) {
 	const { onClose } = useSearchbarCtx();
+
+	const handleClick = (event: MouseEvent<HTMLButtonElement>) => {
+		onClick?.(event);
+		if (!event.defaultPrevented) onClose();
+	};
+
 	return (
-		<button className={cn("relative", className)} {...props} onClick={onClose}>
+		<button type={type ?? "button"} className={cn("relative", className)} {...props} onClick={handleClick}>
 			{children}
 		</button>
 	)
@@ -59,16 +88,16 @@ function CloseSearch({ children, className, ...props }: ComponentPropsWithRef<"b
 
 
 
-function ClearInput({ children, className, ...props }: ComponentPropsWithRef<"button">) {
+function ClearInput({ children, className, type, ...props }: SearchBarButtonProps) {
 	return (
-		<button className={cn("relative", className)} {...props}>
+		<button type={type ?? "button"} className={cn("relative", className)} {...props}>
 			{children}
 		</button>
 	)
 }
 
 
-function OverLay({ className, ...props }: ComponentPropsWithRef<"div">) {
+function Overlay({ className, ...props }: SearchBarSectionProps) {
 	const { open, onClose } = useSearchbarCtx();
 	const overlayRef = useRef<HTMLDivElement>(null);
 	useGSAP(() => {
@@ -164,14 +193,16 @@ function Input({ className, ...props }: ComponentPropsWithRef<"input">) {
 }
 
 
-SearchBar.Trigger = Trigger;
-SearchBar.CloseSearch = CloseSearch;
-SearchBar.Head = Head;
-SearchBar.Body = Body;
-SearchBar.ClearInput = ClearInput;
-SearchBar.Container = Container;
-SearchBar.InputContainer = InputContainer;
-SearchBar.OverLay = OverLay;
-SearchBar.Input = Input;
-SearchBar.ResultsContainer = ResultContainer;
+const SearchBar = Object.assign(SearchBarRoot, {
+	Trigger,
+	CloseSearch,
+	Head,
+	Body,
+	ClearInput,
+	Container,
+	InputContainer,
+	Overlay,
+	Input,
+	ResultsContainer: ResultContainer,
+}) as SearchBarCompoundComponent;
 export default SearchBar;
